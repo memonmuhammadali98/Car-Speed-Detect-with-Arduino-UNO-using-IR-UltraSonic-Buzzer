@@ -3,18 +3,14 @@
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 // -------- PIN DEFINITIONS --------
-
-// Ultrasonic
 #define ULTRA1_TRIG 2
 #define ULTRA1_ECHO 3
 #define ULTRA2_TRIG 4
 #define ULTRA2_ECHO 5
 
-// IR Sensors (ACTIVE LOW)
 #define IR1_PIN 6
 #define IR2_PIN 7
 
-// Buzzer
 #define BUZZER_PIN 8
 
 // -------- VARIABLES --------
@@ -34,7 +30,7 @@ const unsigned long resetDelay = 2000;
 unsigned long buzzerStartTime = 0;
 unsigned long lastBuzzerToggle = 0;
 const unsigned long buzzerDuration = 2000; // 2 seconds
-const unsigned long buzzerInterval = 80;   // fast beep
+const unsigned long buzzerInterval = 50;   // fast beep
 bool buzzerState = false;
 bool buzzerActive = false;
 
@@ -43,7 +39,6 @@ const int detectionDistance = 12;
 
 // -------- SETUP --------
 void setup() {
-
   lcd.begin(16, 2);
   lcd.backlight();
   lcd.print("Hybrid Detector");
@@ -67,6 +62,7 @@ void loop() {
 
   unsigned long currentMillis = millis();
 
+  // --- FAST ULTRASONIC READ ---
   long distance1 = getDistanceCM(ULTRA1_TRIG, ULTRA1_ECHO);
   long distance2 = getDistanceCM(ULTRA2_TRIG, ULTRA2_ECHO);
 
@@ -90,14 +86,13 @@ void loop() {
 
   // ---- SPEED CALCULATION ----
   if (sensor1Triggered && sensor2Triggered) {
-
     unsigned long timeDiff = timeSensor2 - timeSensor1;
 
     if (timeDiff > 2000) { // ignore noise
       speed = distanceBetweenSensors / (timeDiff / 1000000.0);
       lastDetectionTime = currentMillis;
 
-      // Start buzzer for 3 seconds
+      // Start buzzer for 2 seconds
       buzzerStartTime = currentMillis;
       buzzerActive = true;
     }
@@ -123,31 +118,27 @@ void loop() {
   else
     lcd.print("                ");
 
-  // ---- BUZZER 3 SECOND CONTROL ----
+  // ---- BUZZER CONTROL ----
   if (buzzerActive) {
-
     if (currentMillis - buzzerStartTime <= buzzerDuration) {
-
       if (currentMillis - lastBuzzerToggle >= buzzerInterval) {
         lastBuzzerToggle = currentMillis;
         buzzerState = !buzzerState;
         digitalWrite(BUZZER_PIN, buzzerState ? LOW : HIGH);
       }
-
     } else {
-      // Stop buzzer after 3 sec
       buzzerActive = false;
       digitalWrite(BUZZER_PIN, HIGH);
       buzzerState = false;
     }
   }
 
-  delay(40);
+  // --- REMOVE LONG DELAY FOR FAST DETECTION ---
+  delay(5); // very short delay to prevent freezing
 }
 
 // -------- ULTRASONIC FUNCTION --------
 long getDistanceCM(int trigPin, int echoPin) {
-
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
 
@@ -155,7 +146,7 @@ long getDistanceCM(int trigPin, int echoPin) {
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
 
-  long duration = pulseIn(echoPin, HIGH, 30000);
+  long duration = pulseIn(echoPin, HIGH, 10000); // reduced timeout to 10 ms
 
   if (duration == 0) return -1;
 
